@@ -60,7 +60,7 @@ export default {
   components: { chart },
   data: () => ({
     tf: {
-      optimiser: tf.train.sgd(0.00001),
+      optimiser: tf.train.sgd(0.5),
       polynomial: {
         a: tf.variable(tf.scalar(Math.random())),
         b: tf.variable(tf.scalar(Math.random())),
@@ -192,7 +192,7 @@ export default {
     train: function() {
       const xs = tf.tensor1d(this.getXs());
       const ys = tf.tensor1d(this.getYs());
-      for (let i = 0; i < 75; i++) {
+      for (let i = 0; i < 100; i++) {
         this.tf.optimiser.minimize(() => this.loss(this.predict(xs), ys));
       }
       this.setLineData();
@@ -223,7 +223,6 @@ export default {
       const curveY = ys.dataSync();
       ys.dispose();
       this.lineData = [];
-      console.log(curveY);
       let j = 0;
       for (let x = this.minX; x <= this.maxX; x += 0.1) {
         this.lineData.push({
