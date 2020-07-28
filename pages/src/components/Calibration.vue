@@ -44,6 +44,13 @@
         <chart :chartData="chartData" :options="chartOptions" />
       </v-col>
     </v-row>
+
+    <v-row>
+      <p>Your polynomial is:</p>
+    </v-row>
+    <v-row>
+      <pre>{{ polynomial }}</pre>
+    </v-row>
   </v-container>
 </template>
 
@@ -65,7 +72,6 @@ export default {
         a: tf.variable(tf.scalar(Math.random())),
         b: tf.variable(tf.scalar(Math.random())),
         c: tf.variable(tf.scalar(Math.random())),
-        d: tf.variable(tf.scalar(Math.random())),
       },
     },
     lineData: [],
@@ -77,13 +83,18 @@ export default {
       { text: "Remove", value: "controls" },
     ],
     measurements: [
-      { sg: 1.01, angle: 69 },
-      { sg: 1.02, angle: 67 },
-      { sg: 1.03, angle: 65 },
-      { sg: 1.04, angle: 60 },
-      { sg: 1.05, angle: 56 },
-      { sg: 1.07, angle: 50 },
-      { sg: 1.09, angle: 20 },
+      { sg: 1, angle: 27.4 },
+      { sg: 1.008, angle: 32 },
+      { sg: 1.02, angle: 39 },
+      { sg: 1.027, angle: 42.4 },
+      { sg: 1.036, angle: 46.7 },
+      { sg: 1.039, angle: 48.4 },
+      { sg: 1.048, angle: 52 },
+      { sg: 1.067, angle: 58.85 },
+      { sg: 1.069, angle: 59.95 },
+      { sg: 1.071, angle: 60.6 },
+      { sg: 1.074, angle: 61.25 },
+      { sg: 1.077, angle: 62.63 },
     ],
     chartOptions: {
       responsive: true,
@@ -92,7 +103,7 @@ export default {
         xAxes: [
           {
             ticks: {
-              reverse: true,
+              reverse: false,
             },
           },
         ],
@@ -104,6 +115,16 @@ export default {
     maxY: null,
   }),
   computed: {
+    polynomial() {
+      let ret = `${this.tf.polynomial.a.dataSync()}*(tilt)*(tilt)`;
+      const b = this.tf.polynomial.b.dataSync();
+      ret += b >= 0 ? "+" : "";
+      ret += `${b}*(tilt)`;
+      const c = this.tf.polynomial.c.dataSync();
+      ret += c >= 0 ? "+" : "";
+      ret += `${c}`;
+      return ret;
+    },
     chartData: function() {
       let ret = [];
       for (let i = 0; i < this.measurements.length; i++) {
@@ -125,6 +146,11 @@ export default {
         ],
       };
     },
+  },
+  mounted() {
+    if (this.measurements.length > 0) {
+      this.train();
+    }
   },
   methods: {
     addMeasurement: function() {
@@ -192,19 +218,24 @@ export default {
     train: function() {
       const xs = tf.tensor1d(this.getXs());
       const ys = tf.tensor1d(this.getYs());
-      for (let i = 0; i < 100; i++) {
+      for (let i = 0; i < 50; i++) {
         this.tf.optimiser.minimize(() => this.loss(this.predict(xs), ys));
       }
       this.setLineData();
     },
     predict: function(x) {
       return tf.tidy(() =>
+        // x
+        //   .pow(tf.scalar(3))
+        //   .mul(this.tf.polynomial.a)
+        //   .add(x.square().mul(this.tf.polynomial.b))
+        //   .add(x.mul(this.tf.polynomial.c))
+        //   .add(this.tf.polynomial.d)
         x
-          .pow(tf.scalar(3))
+          .square()
           .mul(this.tf.polynomial.a)
-          .add(x.square().mul(this.tf.polynomial.b))
-          .add(x.mul(this.tf.polynomial.c))
-          .add(this.tf.polynomial.d)
+          .add(x.mul(this.tf.polynomial.b))
+          .add(this.tf.polynomial.c)
       );
     },
     loss: function(pred, expectation) {
@@ -227,13 +258,7 @@ export default {
       for (let x = this.minX; x <= this.maxX; x += 0.1) {
         this.lineData.push({
           x: x,
-          y: curveY[j]
-          .map(
-            -1,
-            1,
-            this.minY,
-            this.maxY
-          ),
+          y: curveY[j].map(-1, 1, this.minY, this.maxY),
         });
         j++;
       }
