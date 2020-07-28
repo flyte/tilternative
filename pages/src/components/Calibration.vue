@@ -60,12 +60,12 @@ export default {
   components: { chart },
   data: () => ({
     tf: {
-      optimiser: tf.train.sgd(0.01),
+      optimiser: tf.train.sgd(0.00001),
       polynomial: {
-        a: tf.variable(tf.scalar(0)),
-        b: tf.variable(tf.scalar(0)),
-        c: tf.variable(tf.scalar(0)),
-        d: tf.variable(tf.scalar(0)),
+        a: tf.variable(tf.scalar(Math.random())),
+        b: tf.variable(tf.scalar(Math.random())),
+        c: tf.variable(tf.scalar(Math.random())),
+        d: tf.variable(tf.scalar(Math.random())),
       },
     },
     lineData: [],
@@ -169,8 +169,8 @@ export default {
       for (let i = 0; i < this.measurements.length; i++) {
         angles.push(this.measurements[i].angle);
       }
-      this.minX = Math.min(angles);
-      this.maxX = Math.max(angles);
+      this.minX = Math.min(...angles);
+      this.maxX = Math.max(...angles);
       for (let i = 0; i < angles.length; i++) {
         xs.push(angles[i].map(this.minX, this.maxX, -1, 1));
       }
@@ -182,8 +182,8 @@ export default {
       for (let i = 0; i < this.measurements.length; i++) {
         sgs.push(this.measurements[i].sg);
       }
-      this.minY = Math.min(sgs);
-      this.maxY = Math.min(sgs);
+      this.minY = Math.min(...sgs);
+      this.maxY = Math.max(...sgs);
       for (let i = 0; i < sgs.length; i++) {
         ys.push(sgs[i].map(this.minY, this.maxY, -1, 1));
       }
@@ -192,21 +192,20 @@ export default {
     train: function() {
       const xs = tf.tensor1d(this.getXs());
       const ys = tf.tensor1d(this.getYs());
-      for (let i = 0; i < 500; i++) {
+      for (let i = 0; i < 75; i++) {
         this.tf.optimiser.minimize(() => this.loss(this.predict(xs), ys));
       }
       this.setLineData();
     },
     predict: function(x) {
-      return tf.tidy(() => {
-        const y = x
+      return tf.tidy(() =>
+        x
           .pow(tf.scalar(3))
           .mul(this.tf.polynomial.a)
           .add(x.square().mul(this.tf.polynomial.b))
           .add(x.mul(this.tf.polynomial.c))
-          .add(this.tf.polynomial.d);
-        return y;
-      });
+          .add(this.tf.polynomial.d)
+      );
     },
     loss: function(pred, expectation) {
       const ret = pred
@@ -224,16 +223,20 @@ export default {
       const curveY = ys.dataSync();
       ys.dispose();
       this.lineData = [];
+      console.log(curveY);
+      let j = 0;
       for (let x = this.minX; x <= this.maxX; x += 0.1) {
         this.lineData.push({
           x: x,
-          y: curveY[x.map(this.minX, this.maxX, -1, 1)].map(
+          y: curveY[j]
+          .map(
             -1,
             1,
             this.minY,
             this.maxY
           ),
         });
+        j++;
       }
     },
   },
